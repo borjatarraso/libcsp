@@ -3,7 +3,7 @@
 
 # Cubesat Space Protocol - A small network-layer protocol designed for Cubesats
 # Copyright (C) 2011 GomSpace ApS (http://www.gomspace.com)
-# Copyright (C) 2011 AAUSAT3 Project (http://aausat3.space.aau.dk) 
+# Copyright (C) 2011 AAUSAT3 Project (http://aausat3.space.aau.dk)
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -28,14 +28,14 @@ def options(ctx):
 	# Load GCC options
 	ctx.load('gcc')
 	ctx.load('eclipse', tooldir='tools')
-	
+
 	ctx.add_option('--toolchain', default='', help='Set toolchain prefix')
 
 	# Set libcsp options
 	gr = ctx.add_option_group('libcsp options')
 	gr.add_option('--cflags', default='', help='Add additional CFLAGS. Separate with comma')
 	gr.add_option('--includes', default='', help='Add additional include paths. Separate with comma')
-	
+
 	gr.add_option('--disable-output', action='store_true', help='Disable CSP output')
 	gr.add_option('--enable-rdp', action='store_true', help='Enable RDP support')
 	gr.add_option('--enable-qos', action='store_true', help='Enable Quality of Service support')
@@ -83,14 +83,14 @@ def configure(ctx):
 
 	# Setup CFLAGS
 	ctx.env.append_unique('CFLAGS_CSP', ['-Os','-Wall', '-g', '-std=gnu99'] + ctx.options.cflags.split(','))
-	
+
 	# Setup extra includes
 	ctx.env.append_unique('INCLUDES_CSP', ['include'] + ctx.options.includes.split(','))
 
 	# Add default files
 	ctx.env.append_unique('FILES_CSP', ['src/*.c','src/interfaces/csp_if_lo.c','src/transport/csp_udp.c','src/arch/{0}/**/*.c'.format(ctx.options.with_os)])
 
-	# Add FreeRTOS 
+	# Add FreeRTOS
 	if ctx.options.with_os == 'freertos':
 		ctx.env.append_unique('INCLUDES_CSP', ctx.options.with_freertos)
 		ctx.define('_CSP_FREERTOS_', 1)
@@ -146,7 +146,7 @@ def configure(ctx):
 	ctx.define('CSP_PADDING_BYTES', ctx.options.with_padding)
 
 	ctx.write_config_header('include/csp/csp_autoconfig.h', top=False, remove=False)
-	
+
 	# Check for endian.h
 	ctx.check(header_name='endian.h', mandatory=False)
 
@@ -178,6 +178,27 @@ def build(ctx):
 	if ctx.env.ENABLE_EXAMPLES:
 		ctx.program(source = ctx.path.ant_glob('examples/simple.c'),
 			target = 'simple',
+			includes = ctx.env.INCLUDES_CSP,
+			cflags = ctx.env.CFLAGS_CSP,
+			defines = ctx.env.DEFINES_CSP,
+			lib=['rt', 'pthread'],
+			use = 'csp')
+		ctx.program(source = ctx.path.ant_glob('examples/csp_over_tcp.c'),
+			target = 'csptcp',
+			includes = ctx.env.INCLUDES_CSP,
+			cflags = ctx.env.CFLAGS_CSP,
+			defines = ctx.env.DEFINES_CSP,
+			lib=['rt', 'pthread'],
+			use = 'csp')
+		ctx.program(source = ctx.path.ant_glob('examples/csp_over_udp.c'),
+			target = 'cspudp',
+			includes = ctx.env.INCLUDES_CSP,
+			cflags = ctx.env.CFLAGS_CSP,
+			defines = ctx.env.DEFINES_CSP,
+			lib=['rt', 'pthread'],
+			use = 'csp')
+		ctx.program(source = ctx.path.ant_glob('examples/csp_over_ip.c'),
+			target = 'cspip',
 			includes = ctx.env.INCLUDES_CSP,
 			cflags = ctx.env.CFLAGS_CSP,
 			defines = ctx.env.DEFINES_CSP,
