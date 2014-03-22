@@ -1,5 +1,5 @@
 /*
-csp_over_udp.c - Example of CSP protocol running over ip raw sockets
+csp_over_ip.c - Example of CSP protocol running over ip raw sockets
 Copyright (C) 2014 Aalto University, Department of Radio Science and Engineering
 
 This library is free software; you can redistribute it and/or
@@ -130,7 +130,10 @@ int main(int argc, char **argv) {
         me = 1;
         other = 2;
 
-        server_socket = socket(AF_INET, SOCK_RAW, CSP_PROTO);
+        if ((server_socket = socket(AF_INET, SOCK_RAW, CSP_PROTO)) == -1) {
+            perror("socket");
+            exit(1);
+        }
 
         memset(&servaddr, 0, sizeof(servaddr));
         servaddr.sin_family = AF_INET;
@@ -141,7 +144,10 @@ int main(int argc, char **argv) {
         me = 2;
         other = 1;
 
-        tx_channel = socket(AF_INET, SOCK_RAW, CSP_PROTO);
+        if ((tx_channel = socket(AF_INET, SOCK_RAW, CSP_PROTO)) == -1) {
+            perror("socket");
+            exit(1);
+        }
 
         memset(&servaddr, 0, sizeof(servaddr));
         servaddr.sin_family = AF_INET;

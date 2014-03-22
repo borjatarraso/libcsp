@@ -104,7 +104,6 @@ int main(int argc, char **argv) {
         return -1;
     } else if (strcmp(argv[1],"client") == 0 && argc != 3) {
         printf("Unspecified destination IP address\n\n");
-        printf("usage: server <server/client> [ip]\n");
         return -1;
     }
 
@@ -113,26 +112,31 @@ int main(int argc, char **argv) {
         me = 1;
         other = 2;
 
-        server_socket = socket(AF_INET, SOCK_DGRAM, 0);
+        if ((server_socket = socket(AF_INET, SOCK_DGRAM, 0)) == -1) {
+            perror("socket");
+        }
 
         memset(&servaddr, 0, sizeof(servaddr));
         servaddr.sin_family = AF_INET;
         servaddr.sin_addr.s_addr = htonl(INADDR_ANY);
         servaddr.sin_port = htons(SERV_PORT);
 
-        bind(server_socket, (struct sockaddr *) &servaddr, sizeof(servaddr));
+        if (bind(server_socket, (struct sockaddr *) &servaddr, sizeof(servaddr)) == -1) {
+            perror("bind");
+        }
 
         type = TYPE_SERVER;
     } else if (strcmp(argv[1], "client") == 0) {
         me = 2;
         other = 1;
 
-        tx_channel = socket(AF_INET, SOCK_DGRAM, 0);
+        if ((tx_channel = socket(AF_INET, SOCK_DGRAM, 0)) == -1) {
+            perror("socket");
+        }
 
         memset(&servaddr, 0, sizeof(servaddr));
         servaddr.sin_family = AF_INET;
         servaddr.sin_port = htons(SERV_PORT);
-
         inet_pton(AF_INET, argv[2], &servaddr.sin_addr);
 
         type = TYPE_CLIENT;

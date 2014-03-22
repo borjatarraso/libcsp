@@ -60,7 +60,7 @@ csp_iface_t csp_if_socket = {
 
 int csp_socket_tx(csp_packet_t *packet, uint32_t timeout) {
     if (send(tx_channel, &packet->length, packet->length + sizeof(uint32_t) + sizeof(uint16_t), 0) < 0)
-        printf("Failed to write frame\r\n");
+        perror("send");
 
     csp_buffer_free(packet);
     return 1;
@@ -96,8 +96,7 @@ int main(int argc, char **argv) {
         printf("usage: %s <server/client> [ip]\n", argv[0]);
         return -1;
     } else if (strcmp(argv[1],"client") == 0 && argc != 3) {
-        printf("Unspecified destination IP address\n\n");
-        printf("usage: server <server/client> [ip]\n");
+        printf("Unspecified destination IP address\n");
         return -1;
     }
 
@@ -106,16 +105,25 @@ int main(int argc, char **argv) {
         me = 1;
         other = 2;
 
-        server_socket = socket(AF_INET, SOCK_STREAM, 0);
+        if ((server_socket = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
+            perror("socket");
+            exit(1);
+        }
 
         memset(&servaddr, 0, sizeof(servaddr));
         servaddr.sin_family = AF_INET;
         servaddr.sin_addr.s_addr = htonl(INADDR_ANY);
         servaddr.sin_port = htons(SERV_PORT);
 
-        bind(server_socket, (struct sockaddr *) &servaddr, sizeof(servaddr));
+        if ((bind(server_socket, (struct sockaddr *) &servaddr, sizeof(servaddr))) == -1) {
+            perror("bind");
+            exit(1);
+        }
 
-        listen(server_socket, LISTENQ);
+        if (listen(server_socket, LISTENQ) == -1) {
+            perror("listen");
+            exit(1);
+        }
 
         type = TYPE_SERVER;
     } else if (strcmp(argv[1], "client") == 0) {
@@ -129,7 +137,10 @@ int main(int argc, char **argv) {
         servaddr.sin_port = htons(SERV_PORT);
         inet_pton(AF_INET, argv[2], &servaddr.sin_addr);
 
-        connect(tx_channel, (struct sockaddr *) &servaddr, sizeof(servaddr));
+        if (connect(tx_channel, (struct sockaddr *) &servaddr, sizeof(servaddr)) == -1) {
+            perror("connect");
+            exit(1);
+        }
 
         type = TYPE_CLIENT;
     } else {
