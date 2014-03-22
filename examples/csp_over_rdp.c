@@ -143,6 +143,7 @@ int main(int argc, char **argv) {
         return -1;
     }
 
+
     /* Start socket RX task */
     pthread_create(&rx_thread, NULL, socket_rx, NULL);
 
@@ -154,21 +155,21 @@ int main(int argc, char **argv) {
     if (type == TYPE_SERVER) {
         sock = csp_socket(CSP_SO_RDPREQ);
         csp_bind(sock, PORT);
-        csp_listen(sock, 5);
+        csp_listen(sock, 5); // TODO: remove listen?
     }
 
     /* Super loop */
     while (1) {
         if (type == TYPE_SERVER) {
             /* Process incoming packet */
-            conn = csp_accept(sock, 1000);
+            conn = csp_accept(sock, 1000); // TODO: remove accept?
             if (conn) {
-                packet = csp_read(conn, 0);
+            packet = csp_read(conn, 0); // TODO: check second parameter from read.
                 if (packet)
                         printf("Received: %s\r\n", packet->data);
                 csp_buffer_free(packet);
-                csp_close(conn);
-            }
+                csp_close(conn); // TODO: we need to close packet after read?
+                }
         } else {
             /* Send a new packet */
             packet = csp_buffer_get(strlen(message));
@@ -178,9 +179,7 @@ int main(int argc, char **argv) {
 
                 conn = csp_connect(CSP_PRIO_NORM, other, PORT, 1000, CSP_O_RDP);
                 printf("Sending: %s\r\n", message);
-
-                if(!csp_sendto(PRIO, , servaddr.sin_port,
-                if (!conn || !csp_sendto(conn, packet, 1000))
+                if (!conn || !csp_send(conn, packet, 1000)) // Do we need to modify this?
                     return -1;
                 csp_close(conn);
             }
@@ -192,4 +191,5 @@ int main(int argc, char **argv) {
     close(tx_channel);
 
     return 0;
+
 }
