@@ -1,5 +1,5 @@
 /*
-csp_over_rdp.c - Example of CSP protocol running over reliable datagram sockets
+csp_over_rdp.c - Example of CSP protocol running with RDP (Reliable Data Protocol)
 Copyright (C) 2014 Aalto University, Department of Radio Science and Engineering
 
 This library is free software; you can redistribute it and/or
@@ -49,8 +49,8 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 #define CSP_PROTO 213
 
 pthread_t rx_thread;
-int server_socket, tx_channel;
-struct sockaddr_in servaddr;
+int data_socket;
+struct sockaddr_in remoteaddr;
 
 int csp_socket_tx(csp_packet_t *packet, uint32_t timeout);
 
@@ -61,10 +61,8 @@ csp_iface_t csp_if_socket = {
 };
 
 int csp_socket_tx(csp_packet_t *packet, uint32_t timeout) {
-    printf("Debug tx: %i\n", packet->length);
-
-    if (sendto(tx_channel, &packet->length, packet->length + sizeof(uint32_t) + sizeof(uint16_t), 0, (struct sockaddr *) &servaddr , sizeof(servaddr)) < 0)
-        perror("sendto");
+    if (sendto(data_socket, &packet->length, packet->length + sizeof(uint32_t) + sizeof(uint16_t), 0, (struct sockaddr *) &remoteaddr , sizeof(remoteaddr)) < 0)
+      perror("sendto");
 
     csp_buffer_free(packet);
     return 1;
@@ -72,8 +70,7 @@ int csp_socket_tx(csp_packet_t *packet, uint32_t timeout) {
 
 void * socket_rx(void * parameters) {
     csp_packet_t *buf;
-    struct sockaddr_in sa;
-    socklen_t length;
+    socklen_t length = sizeof(remoteaddr);
     int numbytes;
 
     /* To check origin/destination of the packet */
@@ -81,8 +78,7 @@ void * socket_rx(void * parameters) {
 
     buf = csp_buffer_get(BUF_SIZE);
 
-    while ((numbytes = recvfrom(server_socket, &buf->length, BUF_SIZE, 0, (struct sockaddr *) &sa , &length)) > 0) {
-        printf("Debug rx: Got packet from IP: %s with length %i payload %i\n", inet_ntop(AF_INET, &sa.sin_addr, ipbuf, sizeof(ipbuf)), numbytes, buf->length);
+    while ((numbytes = recvfrom(data_socket, &buf->length, BUF_SIZE, 0, (struct sockaddr *) &remoteaddr , &length)) > 0) {
         csp_new_packet(buf, &csp_if_socket, NULL);
         buf = csp_buffer_get(BUF_SIZE);
     }
@@ -109,27 +105,28 @@ int main(int argc, char **argv) {
         me = 1;
         other = 2;
 
-        server_socket = socket(AF_INET, SOCK_DGRAM, 0);
+        data_socket = socket(AF_INET, SOCK_DGRAM, 0);
 
+	struct sockaddr_in servaddr;
         memset(&servaddr, 0, sizeof(servaddr));
         servaddr.sin_family = AF_INET;
         servaddr.sin_addr.s_addr = htonl(INADDR_ANY);
         servaddr.sin_port = htons(SERV_PORT);
 
-        bind(server_socket, (struct sockaddr *) &servaddr, sizeof(servaddr));
+        bind(data_socket, (struct sockaddr *) &servaddr, sizeof(servaddr));
 
         type = TYPE_SERVER;
     } else if (strcmp(argv[1], "client") == 0) {
         me = 2;
         other = 1;
 
-        tx_channel = socket(AF_INET, SOCK_DGRAM, 0);
+        data_socket = socket(AF_INET, SOCK_DGRAM, 0);
 
-        memset(&servaddr, 0, sizeof(servaddr));
-        servaddr.sin_family = AF_INET;
-        servaddr.sin_port = htons(SERV_PORT);
+        memset(&remoteaddr, 0, sizeof(remoteaddr));
+        remoteaddr.sin_family = AF_INET;
+        remoteaddr.sin_port = htons(SERV_PORT);
 
-        inet_pton(AF_INET, argv[2], &servaddr.sin_addr);
+        inet_pton(AF_INET, argv[2], &remoteaddr.sin_addr);
 
         type = TYPE_CLIENT;
     } else {
@@ -143,7 +140,6 @@ int main(int argc, char **argv) {
         return -1;
     }
 
-
     /* Start socket RX task */
     pthread_create(&rx_thread, NULL, socket_rx, NULL);
 
@@ -153,23 +149,25 @@ int main(int argc, char **argv) {
 
     /* Create socket and listen for incoming connections */
     if (type == TYPE_SERVER) {
-        sock = csp_socket(CSP_SO_RDPREQ);
+        sock = csp_socket(CSP_O_RDP);
         csp_bind(sock, PORT);
-        csp_listen(sock, 5); // TODO: remove listen?
+        csp_listen(sock, 5);
     }
 
     /* Super loop */
     while (1) {
         if (type == TYPE_SERVER) {
             /* Process incoming packet */
-            conn = csp_accept(sock, 1000); // TODO: remove accept?
+            conn = csp_accept(sock, 1000);
             if (conn) {
-            packet = csp_read(conn, 0); // TODO: check second parameter from read.
-                if (packet)
-                        printf("Received: %s\r\n", packet->data);
-                csp_buffer_free(packet);
-                csp_close(conn); // TODO: we need to close packet after read?
+                packet = csp_read(conn, 0);
+                if (packet) {
+                    packet->data[packet->length] = 0;
+                    printf("Received: %s\r\n", packet->data);
                 }
+                csp_buffer_free(packet);
+                csp_close(conn);
+            }
         } else {
             /* Send a new packet */
             packet = csp_buffer_get(strlen(message));
@@ -178,8 +176,8 @@ int main(int argc, char **argv) {
                 packet->length = strlen(message);
 
                 conn = csp_connect(CSP_PRIO_NORM, other, PORT, 1000, CSP_O_RDP);
-                printf("Sending: %s\r\n", message);
-                if (!conn || !csp_send(conn, packet, 1000)) // Do we need to modify this?
+                printf("Sending: %s (%d bytes)\r\n", message, packet->length);
+                if (!conn || !csp_send(conn, packet, 1000))
                     return -1;
                 csp_close(conn);
             }
@@ -187,8 +185,7 @@ int main(int argc, char **argv) {
         }
     }
 
-    close(server_socket);
-    close(tx_channel);
+    close(data_socket);
 
     return 0;
 
