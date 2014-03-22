@@ -204,6 +204,13 @@ def build(ctx):
 			defines = ctx.env.DEFINES_CSP,
 			lib=['rt', 'pthread'],
 			use = 'csp')
+		ctx.program(source = ctx.path.ant_glob('examples/csp_over_rdp.c'),
+			target = 'csprdp',
+			includes = ctx.env.INCLUDES_CSP,
+			cflags = ctx.env.CFLAGS_CSP,
+			defines = ctx.env.DEFINES_CSP,
+			lib=['rt', 'pthread'],
+			use = 'csp')
 
 	# Set install path for header files
 	ctx.install_files('${PREFIX}', ctx.path.ant_glob('include/**/*.h'), relative_trick=True)

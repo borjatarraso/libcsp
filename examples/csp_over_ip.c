@@ -1,13 +1,14 @@
 /*
-csp_over_ip.c - Example of CSP protocol running over ip raw sockets
-Copyright (C) 2014 Aalto University, Department of Radio Science and Engineering
+csp_over_ip.c - Example of CSP protocol running over ip raw sockets.
+Copyright (C) 2014 Borja Tarraso Hueso <borja.tarraso@member.fsf.org>
+This file is a part of Aalto1, Aalto University, Department of Radio Science and Engineering
 
-This library is free software; you can redistribute it and/or
+This source is free software; you can redistribute it and/or
 modify it under the terms of the GNU Lesser General Public
 License as published by the Free Software Foundation; either
 version 2.1 of the License, or (at your option) any later version.
 
-This library is distributed in the hope that it will be useful,
+This source is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 Lesser General Public License for more details.
@@ -62,8 +63,6 @@ csp_iface_t csp_if_socket = {
 };
 
 int csp_socket_tx(csp_packet_t *packet, uint32_t timeout) {
-    socklen_t length;
-
     printf("Debug tx: %i\n", packet->length);
 
     if (sendto(tx_channel, &packet->length, packet->length + sizeof(uint32_t) + sizeof(uint16_t), 0, (struct sockaddr *) &servaddr , sizeof(servaddr)) < 0)
