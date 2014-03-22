@@ -92,8 +92,12 @@ int main(int argc, char **argv) {
     csp_packet_t *packet;
 
     /* Run as either server or client */
-    if (argc != 2) {
-        printf("usage: server <server/client>\r\n");
+    if (argc < 2) {
+        printf("usage: %s <server/client> [ip]\n", argv[0]);
+        return -1;
+    } else if (strcmp(argv[1],"client") == 0 && argc != 3) {
+        printf("Unspecified destination IP address\n\n");
+        printf("usage: server <server/client> [ip]\n");
         return -1;
     }
 
@@ -123,7 +127,7 @@ int main(int argc, char **argv) {
         memset(&servaddr, 0, sizeof(servaddr));
         servaddr.sin_family = AF_INET;
         servaddr.sin_port = htons(SERV_PORT);
-        inet_pton(AF_INET, argv[1], &servaddr.sin_addr);
+        inet_pton(AF_INET, argv[2], &servaddr.sin_addr);
 
         connect(tx_channel, (struct sockaddr *) &servaddr, sizeof(servaddr));
 

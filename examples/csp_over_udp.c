@@ -99,10 +99,14 @@ int main(int argc, char **argv) {
     csp_packet_t *packet;
 
     /* Run as either server or client */
-        if (argc < 2) {
-            printf("usage: server <server/client>\r\n");
-            return -1;
-        }
+    if (argc < 2) {
+        printf("usage: %s <server/client> [ip]\n", argv[0]);
+        return -1;
+    } else if (strcmp(argv[1],"client") == 0 && argc != 3) {
+        printf("Unspecified destination IP address\n\n");
+        printf("usage: server <server/client> [ip]\n");
+        return -1;
+    }
 
     /* Set type */
     if (strcmp(argv[1], "server") == 0) {

@@ -108,11 +108,22 @@ int main(int argc, char **argv) {
     csp_conn_t *conn;
     csp_packet_t *packet;
 
+    /* Required root to create a RAW socket */
+    if(geteuid() != 0) {
+        printf("Required special privileges for create ip raw sockets\n\n");
+        printf("You must be root or set CAP_NET_RAW capability\n");
+        return -1;
+    }
+
     /* Run as either server or client */
-        if (argc < 2) {
-            printf("usage: server <server/client>\r\n");
-            return -1;
-        }
+    if (argc < 2) {
+        printf("usage: %s <server/client> [ip]\n", argv[0]);
+        return -1;
+    } else if (strcmp(argv[1],"client") == 0 && argc != 3) {
+        printf("Unspecified destination IP address\n\n");
+        printf("usage: server <server/client> [ip]\n");
+        return -1;
+    }
 
     /* Set type */
     if (strcmp(argv[1], "server") == 0) {
